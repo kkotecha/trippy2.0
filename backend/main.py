@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from typing import List, Optional
 import uvicorn
+import uuid
 
 from graph.workflow import app as workflow_app
 from observability import setup_phoenix
@@ -95,8 +96,11 @@ async def plan_trip(request: TripRequest):
 
         print(f"\n🌍 Planning trip to {request.country} for {request.total_duration} days...")
 
-        # Run workflow with config for checkpointer
-        config = {"configurable": {"thread_id": "1"}}
+        # Run workflow with unique thread_id to avoid loading previous state
+        thread_id = str(uuid.uuid4())
+        config = {"configurable": {"thread_id": thread_id}}
+        print(f"🔑 Using thread_id: {thread_id}")
+
         result = workflow_app.invoke(initial_state, config)
 
         print("✅ Trip plan generated successfully!")
