@@ -1,12 +1,21 @@
-fastapi==0.115.5
-uvicorn[standard]==0.32.1
-pydantic==2.10.3
-langchain==0.3.13
-langchain-openai==0.2.14
-langgraph==0.2.60
-python-dotenv==1.0.1
+# Core
+fastapi>=0.110.0
+uvicorn>=0.27.0
+pydantic>=2.7.4
+python-dotenv>=1.0.0
 
-# Observability with Arize Phoenix (Local) and Arize AX (Cloud)
-arize-phoenix>=12.0.0
-arize-otel>=0.8.0
-openinference-instrumentation-langchain>=0.1.35
+# LangGraph & LangChain - use latest compatible versions
+langgraph>=0.2.30
+langchain>=0.3.0
+langchain-openai>=0.2.0
+langchain-core>=0.3.0
+langchain-community>=0.3.0
+
+# Observability - Arize Phoenix
+arize-phoenix>=4.0.0
+openinference-instrumentation-langchain>=0.1.27
+
+# Tools
+geopy>=2.4.1
+requests>=2.31.0
+tavily-python>=0.5.0

@@ -1,217 +1,214 @@
-# AI Trip Planner with LangGraph
+# Multi-City Trip Planner 🌍
 
-A full-stack trip planning application powered by LangGraph multi-agent system with a modern web frontend.
+AI-powered country journey planner using LangGraph's multi-agent architecture with Arize Phoenix observability.
 
 ## Features
 
-- **Multi-Agent Architecture**: Uses LangGraph to orchestrate multiple specialized agents:
-  - Destination Research Agent
-  - Itinerary Creation Agent
-  - Local Tips & Insights Agent
-  - Recommendations Compiler Agent
-
-- **Interactive Frontend**: Clean, responsive UI for planning trips
-- **Customizable Parameters**: Destination, interests, duration, and budget level
-- **Comprehensive Output**: Day-by-day itinerary, weather info, and local insider tips
+- 🗺️ **Multi-city route optimization** - Plan journeys across 2-6 cities
+- 🚆 **Inter-city transportation** - Trains, buses, flights with costs
+- 🏨 **Accommodation recommendations** - Hotels, hostels, Airbnbs
+- 📅 **Day-by-day itineraries** - Activities, meals, timing, costs
+- 💰 **Budget breakdowns** - Complete cost estimates by category
+- 🎒 **Travel logistics** - Packing lists, visas, local tips
+- 🔍 **Full observability** - Arize Phoenix tracing of all agents
 
 ## Architecture
 
-### Backend (LangGraph + FastAPI)
-- **LangGraph Workflow**: State-based graph execution with memory
-- **Multi-Agent System**: Specialized agents for different aspects of trip planning
-- **REST API**: FastAPI endpoints for trip planning requests
+### 9 Specialized Agents
 
-### Frontend (Vanilla JS)
-- Clean, responsive HTML/CSS/JS interface
-- Tab-based results display
-- Real-time API communication
+1. **Country Research Agent** - Destination intelligence
+2. **Route Planning Agent** - Optimal city ordering
+3. **Transport Agent** - Inter-city travel options
+4. **Accommodation Agent** - Where to stay (per city)
+5. **Itinerary Agent** - Daily activities (per city)
+6. **Local Transport Agent** - Getting around (per city)
+7. **Budget Compiler** - Financial breakdown
+8. **Logistics Agent** - Packing and preparation
+9. **Compiler Agent** - Final JSON response
 
-## Setup Instructions
+### 15+ Tools
+
+- `web_search` - Real-time web search via Tavily
+- `optimize_route` - TSP algorithm for minimal travel
+- `calculate_travel_time` - Geocoding + distance
+- `search_hotels` - Accommodation options
+- `search_trains` - Train routes and costs
+- `search_attractions` - Tourist activities
+- `get_visa_requirements` - Entry requirements
+- And more...
+
+## Quick Start
 
 ### Prerequisites
+
 - Python 3.9+
 - OpenAI API key
+- (Optional) Tavily API key for web search
 
-### Backend Setup
+### Installation
 
-1. Navigate to the backend directory:
 ```bash
+# Clone repository (or navigate to your project directory)
+cd trippy2.0
+
+# Backend setup
 cd backend
-```
-
-2. Create a virtual environment:
-```bash
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install dependencies:
-```bash
+source venv/bin/activate  # Windows: venv\Scripts\activate
 pip install -r requirements.txt
-```
 
-4. Create a `.env` file in the root directory:
-```bash
+# Configure environment
+cd ..
 cp .env.example .env
+# Edit .env and add your OPENAI_API_KEY
 ```
 
-5. Add your OpenAI API key to `.env`:
-```
-OPENAI_API_KEY=your_actual_api_key_here
-```
+### Running the Application
 
-6. Run the backend server with Phoenix observability:
 ```bash
-./run_with_phoenix.sh
-```
-
-Or manually:
-```bash
+# Terminal 1: Run backend
+cd backend
+source venv/bin/activate  # Windows: venv\Scripts\activate
 python main.py
 ```
 
-The following will be available:
-- **Backend API**: `http://localhost:8000`
-- **Phoenix UI**: `http://localhost:6006` (for observability and tracing)
+Backend runs at:
+- API: http://localhost:8000
+- Phoenix UI: http://localhost:6006
+- API Docs: http://localhost:8000/docs
 
-### Frontend Setup
-
-1. Navigate to the frontend directory:
 ```bash
+# Terminal 2: Run frontend
 cd frontend
+python3 -m http.server 3000
 ```
 
-2. Open `index.html` in a web browser, or use a simple HTTP server:
-```bash
-# Python 3
-python -m http.server 3000
+Visit: http://localhost:3000
 
-# Node.js (if you have http-server installed)
-npx http-server -p 3000
+## Usage Example
+
+### Input:
+```json
+{
+  "country": "Japan",
+  "total_duration": 14,
+  "interests": ["temples", "food", "technology"],
+  "budget_tier": "moderate",
+  "starting_city": "Tokyo",
+  "travel_pace": "moderate"
+}
 ```
 
-3. Visit `http://localhost:3000` in your browser
+### Output:
+- Route: Tokyo (4 nights) → Kyoto (4 nights) → Osaka (3 nights) → Hiroshima (3 nights)
+- 3 hotels per city with prices
+- Day-by-day activities for each city
+- Train connections with costs
+- Total budget: ~$3,500
 
-## Usage
+## Observability
 
-1. Enter your destination (e.g., "Paris", "Tokyo", "New York")
-2. Add your interests as comma-separated values (e.g., "museums, food, nightlife")
-3. Select trip duration (number of days)
-4. Choose your budget level (Budget, Moderate, or Luxury)
-5. Click "Plan My Trip"
-6. View your personalized itinerary across three tabs:
-   - **Itinerary**: Day-by-day breakdown of activities
-   - **Weather & Tips**: Seasonal information and travel tips
-   - **Local Insights**: Hidden gems and insider recommendations
+### Local Phoenix
+Automatically starts at http://localhost:6006
+
+View:
+- Agent execution graph
+- Tool calls and results
+- LLM prompts and responses
+- Token usage and costs
+- Execution timeline
+
+### Arize Cloud (Optional)
+Add to `.env`:
+```
+ARIZE_SPACE_ID=your-space-id
+ARIZE_API_KEY=your-api-key
+```
+
+View at: https://app.arize.com
 
 ## Project Structure
 
 ```
-trippy/
-├── backend/
-│   ├── main.py           # FastAPI application
-│   ├── agent.py          # LangGraph agent implementation
-│   └── requirements.txt  # Python dependencies
-├── frontend/
-│   ├── index.html        # Main HTML file
-│   ├── style.css         # Styling
-│   └── script.js         # Frontend logic
-├── .env.example          # Environment variables template
-└── README.md             # This file
+backend/
+├── main.py              # FastAPI app
+├── agents/              # 9 agent implementations
+├── tools/               # 15+ tool functions
+├── graph/               # LangGraph workflow
+├── config.py            # Configuration
+└── observability.py     # Phoenix setup
+
+frontend/
+├── index.html           # Form + dynamic tabs
+├── script.js            # API calls + rendering
+└── style.css            # Styling
 ```
 
-## API Endpoints
+## Development
 
-### `GET /`
-Health check endpoint
+### Adding a New Tool
 
-### `POST /plan-trip`
-Plan a trip based on user inputs
+```python
+# backend/tools/your_tool.py
+from langchain_core.tools import tool
 
-**Request Body:**
-```json
-{
-  "destination": "Paris",
-  "interests": ["museums", "food", "architecture"],
-  "duration": 5,
-  "budget": "moderate"
-}
+@tool
+def your_new_tool(param: str) -> dict:
+    """Tool description for LLM"""
+    # Implementation
+    return {"result": "data"}
 ```
 
-**Response:**
-```json
-{
-  "destination": "Paris",
-  "itinerary": "Day 1: ...",
-  "recommendations": {
-    "weather_info": "...",
-    "local_tips": "...",
-    "interests": ["museums", "food", "architecture"],
-    "duration": 5,
-    "budget": "moderate"
-  }
-}
+### Adding a New Agent
+
+```python
+# backend/agents/your_agent.py
+from graph.state import TripPlannerState
+
+def your_agent_node(state: TripPlannerState) -> dict:
+    """Agent implementation"""
+    # Use tools, call LLM
+    return {"new_state_field": "value"}
 ```
 
-## LangGraph Workflow
+Update workflow in `backend/graph/workflow.py`
 
-The agent workflow follows this state machine:
+## Troubleshooting
 
+### Phoenix not starting:
+```bash
+# Kill existing Phoenix process
+pkill -f phoenix
+python main.py
 ```
-[Start] → Research Destination → Create Itinerary → Get Local Tips → Compile Recommendations → [End]
-```
 
-Each node is a specialized agent that:
-1. Takes the current state
-2. Processes information using GPT-4
-3. Updates the state with new information
-4. Passes to the next node
+### Tool errors:
+- Check API keys in .env
+- Verify network connection
+- Check Phoenix UI for error traces
 
-## Technologies Used
-
-- **Backend**: Python, FastAPI, LangGraph, LangChain, OpenAI GPT-4
-- **Frontend**: HTML5, CSS3, Vanilla JavaScript
-- **AI Framework**: LangGraph for agent orchestration
-- **Observability**: Arize Phoenix for tracing and monitoring
-
-## Observability with Arize Phoenix
-
-Phoenix provides real-time tracing and observability for your LangGraph agents:
-
-### Features:
-- 📊 **Trace Visualization**: See each agent's execution in real-time
-- ⚡ **Performance Metrics**: Monitor LLM latency and token usage
-- 🔍 **Debug Tools**: Inspect inputs/outputs for each agent step
-- 📈 **Analytics**: Track usage patterns and costs
-
-### Accessing Phoenix UI:
-
-When you start the backend, Phoenix automatically launches at `http://localhost:6006`
-
-You'll see:
-1. **Traces**: Complete workflow execution from start to finish
-2. **Agent Steps**: Each agent (Research, Itinerary, Local Tips, Compiler)
-3. **LLM Calls**: OpenAI API calls with prompts and responses
-4. **Timing**: Execution time for each step
-5. **Token Usage**: Cost tracking for OpenAI API usage
-
-### Phoenix Dashboard Features:
-
-- **Projects View**: All trip planning sessions organized by project
-- **Trace Details**: Click any trace to see the full agent workflow
-- **Span Details**: Inspect individual agent executions
-- **LLM Metrics**: Token counts, latency, model parameters
-- **Error Tracking**: Catch and debug failed agent executions
+### Slow responses:
+- Expected: 60-90 seconds for full journey
+- Check Phoenix UI for bottleneck agents
+- Consider using faster LLM model
 
 ## Future Enhancements
 
-- Add real-time weather API integration
-- Implement booking system integration
-- Add user authentication and trip saving
-- Include maps and visual itineraries
-- Add more specialized agents (accommodation, dining, transportation)
-- Implement streaming responses for real-time updates
+- [ ] Parallel city processing (20-30s response time)
+- [ ] Real booking API integration
+- [ ] Interactive map visualization
+- [ ] PDF export
+- [ ] User authentication
+- [ ] Trip saving/loading
 
 ## License
 
 MIT
+
+## Credits
+
+Built with:
+- LangGraph
+- LangChain
+- Arize Phoenix
+- FastAPI

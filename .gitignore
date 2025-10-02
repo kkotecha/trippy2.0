@@ -1,52 +1,13 @@
-# Python
 __pycache__/
 *.py[cod]
-*$py.class
-*.so
 .Python
 venv/
 env/
-ENV/
-*.egg-info/
-dist/
-build/
-
-# Environment variables
 .env
 .env.local
-
-# IDE
 .vscode/
 .idea/
-*.swp
-*.swo
-*~
-
-# macOS
-.DS_Store
-.AppleDouble
-.LSOverride
-
-# Logs
 *.log
-
-# Database
-*.db
-*.sqlite3
-
-# Cache
-.cache/
-*.cache
-
-# Testing
-.pytest_cache/
-.coverage
-htmlcov/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# Python virtual environment
-backend/venv/
-backend/env/
-backend/__pycache__/
+.phoenix/
+traces/
+.DS_Store

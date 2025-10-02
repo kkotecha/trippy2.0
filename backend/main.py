@@ -1,17 +1,24 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import List, Optional
 import uvicorn
-from observability import setup_observability
-from agent import TripPlannerAgent
 
-# Setup observability (Phoenix or Arize Cloud)
-setup_observability()
+from graph.workflow import app as workflow_app
+from observability import setup_phoenix
+import config
 
-app = FastAPI(title="Trip Planner API")
+# Setup Phoenix
+setup_phoenix()
 
-# CORS middleware
+# Create FastAPI app
+app = FastAPI(
+    title="Multi-City Trip Planner API",
+    description="AI-powered country journey planner with LangGraph",
+    version="2.0.0"
+)
+
+# CORS - allow all for local development
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -20,43 +27,94 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize the trip planner agent
-trip_agent = TripPlannerAgent()
-
+# Request model
 class TripRequest(BaseModel):
-    destination: str
-    interests: List[str]
-    duration: int  # number of days
-    budget: Optional[str] = "moderate"
+    country: str = Field(..., example="Japan")
+    total_duration: int = Field(..., ge=3, le=30, example=14)
+    interests: List[str] = Field(..., example=["temples", "food", "technology"])
+    budget_tier: str = Field(..., pattern="^(budget|moderate|luxury)$", example="moderate")
+    num_cities: Optional[int] = Field(None, ge=2, le=6)
+    starting_city: Optional[str] = Field(None, example="Tokyo")
+    travel_pace: str = Field(default="moderate", pattern="^(relaxed|moderate|fast)$")
 
-class TripResponse(BaseModel):
-    destination: str
-    itinerary: str
-    recommendations: dict
-
+# Routes
 @app.get("/")
-async def root():
-    return {"message": "Trip Planner API", "status": "running"}
-
-@app.post("/plan-trip", response_model=TripResponse)
-async def plan_trip(request: TripRequest):
-    """
-    Plan a trip based on destination, interests, duration, and budget
-    """
-    try:
-        result = trip_agent.plan_trip(
-            destination=request.destination,
-            interests=request.interests,
-            duration=request.duration,
-            budget=request.budget
-        )
-        return result
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+def root():
+    return {
+        "message": "Multi-City Trip Planner API",
+        "status": "running",
+        "version": "2.0.0",
+        "endpoints": {
+            "plan_trip": "POST /plan-trip",
+            "health": "GET /health",
+            "docs": "GET /docs"
+        }
+    }
 
 @app.get("/health")
-async def health_check():
-    return {"status": "healthy"}
+def health():
+    return {"status": "healthy", "phoenix": "enabled"}
+
+@app.post("/plan-trip")
+async def plan_trip(request: TripRequest):
+    """
+    Generate multi-city trip plan
+
+    This endpoint orchestrates 9 AI agents to create a comprehensive
+    journey plan across multiple cities in a country.
+    """
+    try:
+        # Prepare initial state
+        initial_state = {
+            "country": request.country,
+            "total_duration": request.total_duration,
+            "interests": request.interests,
+            "budget_tier": request.budget_tier,
+            "num_cities": request.num_cities,
+            "starting_city": request.starting_city,
+            "travel_pace": request.travel_pace,
+            "messages": [],
+            # Initialize all fields to avoid KeyError
+            "country_overview": "",
+            "best_months_to_visit": "",
+            "visa_info": "",
+            "safety_info": "",
+            "recommended_cities": [],
+            "city_route": [],
+            "nights_per_city": {},
+            "route_rationale": "",
+            "transport_legs": [],
+            "city_plans": [],
+            "total_budget_estimate": 0.0,
+            "budget_breakdown": {},
+            "money_saving_tips": [],
+            "packing_list": [],
+            "travel_logistics": {},
+            "final_response": {}
+        }
+
+        print(f"\n🌍 Planning trip to {request.country} for {request.total_duration} days...")
+
+        # Run workflow with config for checkpointer
+        config = {"configurable": {"thread_id": "1"}}
+        result = workflow_app.invoke(initial_state, config)
+
+        print("✅ Trip plan generated successfully!")
+
+        # Return final response
+        return result.get("final_response", result)
+
+    except Exception as e:
+        print(f"❌ Error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    print("\n" + "="*60)
+    print("🚀 Multi-City Trip Planner API Starting...")
+    print("="*60)
+    print(f"📍 API Server: http://localhost:8000")
+    print(f"🔍 Phoenix UI: http://localhost:6006")
+    print(f"📚 API Docs: http://localhost:8000/docs")
+    print("="*60 + "\n")
+
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
