@@ -1,0 +1,12 @@
+fastapi==0.115.5
+uvicorn[standard]==0.32.1
+pydantic==2.10.3
+langchain==0.3.13
+langchain-openai==0.2.14
+langgraph==0.2.60
+python-dotenv==1.0.1
+
+# Observability with Arize Phoenix (Local) and Arize AX (Cloud)
+arize-phoenix>=12.0.0
+arize-otel>=0.8.0
+openinference-instrumentation-langchain>=0.1.35

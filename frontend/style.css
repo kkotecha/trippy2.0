@@ -1,0 +1,150 @@
+/* Override Tailwind and custom styles */
+
+/* Keep only essential custom styles, use Tailwind for everything else */
+.tab-panel {
+    display: none;
+}
+
+.tab-panel.active {
+    display: block;
+}
+
+/* Day section styling */
+.day-section {
+    background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+    border-radius: 12px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.day-header {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #065f46;
+    margin-bottom: 1.25rem;
+}
+
+/* Activity styling - simplified without cards */
+.activity-item {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-time {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #059669;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+
+.activity-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 0.25rem;
+}
+
+.activity-description {
+    color: #374151;
+    font-size: 0.875rem;
+    line-height: 1.5;
+}
+
+/* Time of day sections */
+.time-period {
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    color: #6b7280;
+    letter-spacing: 0.05em;
+    margin-bottom: 0.75rem;
+    margin-top: 1rem;
+}
+
+.time-period:first-child {
+    margin-top: 0;
+}
+
+/* Transfer/Transportation - simplified */
+.transfer-card {
+    background: white;
+    border-radius: 50px;
+    padding: 0.75rem 1.25rem;
+    margin: 1.5rem 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    font-size: 0.875rem;
+    color: #374151;
+}
+
+.transfer-icon {
+    width: 32px;
+    height: 32px;
+    background: #1f2937;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1rem;
+}
+
+/* Timeline connector - simpler version */
+.timeline-connector {
+    display: flex;
+    justify-content: center;
+    margin: 1rem 0;
+}
+
+.timeline-dot {
+    width: 8px;
+    height: 8px;
+    background: #d1d5db;
+    border-radius: 50%;
+}
+
+/* Remove old timeline styles */
+.timeline-item::before {
+    display: none;
+}
+
+/* Smooth animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.fade-in {
+    animation: fadeIn 0.4s ease-out;
+}
+
+/* Spinner */
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.spinner {
+    border: 3px solid #e5e7eb;
+    border-top: 3px solid #3b82f6;
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    animation: spin 0.8s linear infinite;
+    margin: 0 auto 1.5rem;
+}
