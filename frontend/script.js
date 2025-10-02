@@ -35,6 +35,9 @@ document.getElementById('tripForm').addEventListener('submit', async (e) => {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
 
+        // Clear previous trip data completely
+        tripData = null;
+
         tripData = await response.json();
 
         // Hide loading, show results
@@ -55,8 +58,20 @@ function displayResults(data) {
     const tabsContainer = document.getElementById('tabs');
     const contentContainer = document.getElementById('tabContent');
 
+    // Force clear all previous content
     tabsContainer.innerHTML = '';
     contentContainer.innerHTML = '';
+
+    // Clear any stored state
+    currentTab = '';
+
+    // Small delay to ensure DOM is cleared
+    setTimeout(() => {
+        renderAllTabs(data);
+    }, 0);
+}
+
+function renderAllTabs(data) {
 
     // Tab 1: Journey Overview
     addTab('overview', '📍 Overview', renderOverview(data));
