@@ -12,7 +12,7 @@ langchain-core>=0.3.0
 langchain-community>=0.3.0
 
 # Observability - Arize Phoenix
-arize-phoenix>=4.0.0
+arize-otel>=2.0.0
 openinference-instrumentation-langchain>=0.1.27
 
 # Tools
