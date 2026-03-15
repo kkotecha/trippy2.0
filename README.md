@@ -1,452 +1,198 @@
-# Multi-City Trip Planner 🌍
+# Trippy 2.0 — Multi-City AI Trip Planner (Prototype)
 
-AI-powered country journey planner using LangGraph's multi-agent architecture with Arize Phoenix Cloud observability.
+An AI-powered multi-city journey planner that uses 9 specialized LangGraph agents to generate comprehensive travel itineraries across 2-6 cities in a single country.
 
-> ⚠️ **Project Status:** This is a functional prototype with mixed real and mock data. See [Tool Status](#tool-status-real-vs-mock-data) below for details on which features use real APIs vs placeholder data.
+**Part of a 3-project series:** See [Trippy v1](https://github.com/kkotecha/trippy) (foundations) and [Trippy 3.0](https://github.com/kkotecha/trippy3.0) (production with real APIs).
 
-## Features
+## Why This Version Exists
 
-- 🗺️ **Multi-city route optimization** - Plan journeys across 2-6 cities
-- 🚆 **Inter-city transportation** - Train/bus routes (mock data, see status below)
-- 🏨 **Accommodation recommendations** - Hotel suggestions (mock data, see status below)
-- 📅 **Day-by-day itineraries** - Activities and attractions (mock data, see status below)
-- 💰 **Budget breakdowns** - Complete cost estimates
-- 🎒 **Travel logistics** - Packing lists, visas, local tips
-- 🔍 **Full observability** - Arize Phoenix Cloud tracing of all agents and LLM calls
+Trippy v1 proved that agent decomposition works for trip planning. v2.0 tackles the next set of product and engineering challenges:
+
+- **Multi-city coordination:** How do you plan across multiple cities with route optimization?
+- **Tool integration:** How do agents call external tools (search, geocoding) alongside LLM reasoning?
+- **Mock → Real migration path:** How do you architect tools so mock implementations can be swapped for real APIs without changing agent logic?
+
+The core question: **How do you design a multi-agent system with a clean tool abstraction layer that lets you iterate from prototype to production incrementally?**
+
+## What Changed from v1
+
+| Aspect | v1 | v2.0 |
+|--------|-----|------|
+| Scope | Single city | 2-6 cities in one country |
+| Agents | 4 | 9 (new: route planning, transport, accommodation, budget, logistics) |
+| Tools | None (LLM-only) | 7 tools (2 real, 5 mock) |
+| Route Planning | N/A | TSP optimization with Geopy + OpenStreetMap |
+| State | Simple flat dict | Nested TypedDict with CityState sub-objects |
+| Observability | Local Phoenix | Arize Phoenix Cloud |
 
 ## Architecture
 
-### 9 Specialized Agents
+```
+[User Input: country, cities, duration, interests, budget]
+     │
+     ▼
+┌─────────────────────┐
+│ 1. Country Research  │  ← Tavily web search (real)
+└────────┬────────────┘
+         ▼
+┌─────────────────────┐
+│ 2. Route Planning    │  ← Geopy + OSM geocoding (real)
+└────────┬────────────┘
+         ▼
+┌─────────────────────┐
+│ 3. Transport         │  ← Inter-city routes (mock)
+└────────┬────────────┘
+         ▼
+┌─────────────────────┐
+│ 4-6. City Processing │  ← Per-city loop: hotels, itinerary, local transport (mock)
+│      (per city)      │
+└────────┬────────────┘
+         ▼
+┌─────────────────────┐
+│ 7. Budget Compiler   │  ← Aggregates all costs
+└────────┬────────────┘
+         ▼
+┌─────────────────────┐
+│ 8. Logistics         │  ← Packing, visas, currency (mock)
+└────────┬────────────┘
+         ▼
+┌─────────────────────┐
+│ 9. Compiler          │  ← Final structured JSON
+└────────┬────────────┘
+         ▼
+   [Complete Trip Plan]
+```
 
-| Agent | Purpose | Status |
-|-------|---------|--------|
-| 1. **Country Research Agent** | Destination intelligence, visa, currency info | ✅ Functional |
-| 2. **Route Planning Agent** | Optimal city ordering and route optimization | ✅ Functional |
-| 3. **Transport Agent** | Inter-city travel options (trains/buses) | ⚠️ Uses mock data |
-| 4. **Accommodation Agent** | Hotel/hostel recommendations per city | ⚠️ Uses mock data |
-| 5. **Itinerary Agent** | Daily activities and attractions per city | ⚠️ Uses mock data |
-| 6. **Local Transport Agent** | Getting around within cities | ✅ Functional |
-| 7. **Budget Compiler** | Financial breakdown and cost estimates | ✅ Functional |
-| 8. **Logistics Agent** | Packing lists and travel preparation | ✅ Functional |
-| 9. **Compiler Agent** | Final structured JSON response | ✅ Functional |
+### Tool Status: Real vs Mock
 
-### Tool Status: Real vs Mock Data
+| Tool | Source | Status |
+|------|--------|--------|
+| `web_search` | Tavily API | Real |
+| `optimize_route` | Geopy + OSM | Real |
+| `search_hotels` | Hardcoded mock | Mock |
+| `search_trains` | 3 hardcoded routes | Mock |
+| `search_attractions` | Generic mock | Mock |
+| `get_visa_requirements` | 4 countries only | Mock |
+| `get_currency_info` | 4 currencies only | Mock |
 
-#### ✅ FULLY DYNAMIC TOOLS (Real Data)
+This is intentional — the mock tools define the interface contract. Swapping them for real APIs (done in v3.0) requires zero changes to agent logic.
 
-| Tool | Description | Data Source |
-|------|-------------|-------------|
-| `web_search` | Real-time web search | **Tavily API** |
-| `optimize_route` | City route optimization using TSP | **Geopy + OpenStreetMap Nominatim** |
+## Tech Stack
 
-#### ⚠️ PARTIALLY DYNAMIC TOOLS
+| Layer | Technology |
+|-------|-----------|
+| Backend | FastAPI + Uvicorn |
+| Agent Orchestration | LangGraph + LangChain |
+| LLM | OpenAI GPT-4o-mini |
+| Real Tools | Tavily (search), Geopy (geocoding) |
+| Observability | Arize Phoenix Cloud |
+| Frontend | HTML, Tailwind CSS, Vanilla JS |
 
-| Tool | Description | Status |
-|------|-------------|--------|
-| `calculate_travel_time` | Travel time between cities | Uses real geocoding but assumes fixed 80 km/h speed (not realistic) |
+## Key Concepts Explored
 
-#### ❌ MOCK/DUMMY TOOLS (Need API Integration)
+**1. Tool Abstraction Layer**
+Each tool is a `@tool`-decorated function with a clear interface. Mock tools return hardcoded data in the exact format real APIs would return. This means swapping `search_hotels` from mock → Google Places API requires changing only the tool implementation — agents, state, and graph remain untouched.
 
-| Tool | Description | Current Behavior | Needed API |
-|------|-------------|------------------|------------|
-| `search_hotels` | Hotel recommendations | Returns generic mock hotels like "{City} Central Hotel" with estimated prices | Booking.com API, Google Places API |
-| `search_trains` | Train/bus routes | Hardcoded data for only 3 routes (Tokyo-Kyoto, Kyoto-Osaka, Paris-Lyon) | Rome2Rio API, Trainline API |
-| `search_attractions` | Tourist attractions | Returns 4 generic mock attractions per city | Google Places API, TripAdvisor API |
-| `get_visa_requirements` | Visa information | Hardcoded info for only 4 countries (Japan, Italy, Thailand, France) | Sherpa API, VisaDB API |
-| `get_currency_info` | Currency and exchange info | Hardcoded data for 4 countries | RestCountries API + ExchangeRate API |
+**2. Nested State Management**
+v1's flat state doesn't scale to multi-city. v2.0 introduces `CityState` as a sub-object within `TripPlannerState`, with per-city hotels, itineraries, and transport. This pattern applies to any multi-entity workflow.
 
-> 📋 **See [TOOL_IMPROVEMENT_ANALYSIS.md](backend/TOOL_IMPROVEMENT_ANALYSIS.md)** for detailed recommendations on making each tool dynamic with real APIs.
+**3. Route Optimization**
+The route planner uses a TSP (Travelling Salesman Problem) approach with Geopy geocoding to minimize backtracking across cities. This demonstrates how agents can combine LLM reasoning with algorithmic computation.
 
-## Quick Start
+**4. Mock-to-Real Migration**
+The `TOOL_IMPROVEMENT_ANALYSIS.md` documents exactly which APIs to use, cost implications, and implementation priority for each mock tool. This is the kind of product roadmap artifact that bridges prototype to production.
+
+## Getting Started
 
 ### Prerequisites
-
 - Python 3.9+
 - OpenAI API key (required)
 - Tavily API key (optional, for web search)
-- Arize Phoenix account (optional, for cloud observability)
 
-### Installation
+### Setup
 
 ```bash
-# Clone repository
-cd trippy2.0
+git clone https://github.com/kkotecha/trippy2.0.git
+cd trippy2.0/backend
 
-# Backend setup
-cd backend
 python -m venv venv
-source venv/bin/activate  # Windows: venv\Scripts\activate
+source venv/bin/activate
 pip install -r requirements.txt
 
-# Configure environment
 cp .env.example .env
-# Edit .env and add your keys:
-#   - OPENAI_API_KEY (required)
-#   - TAVILY_API_KEY (optional but recommended)
-#   - ARIZE_SPACE_ID and ARIZE_API_KEY (optional)
-```
+# Add: OPENAI_API_KEY (required), TAVILY_API_KEY (optional)
 
-### Environment Variables
-
-Create a `.env` file in the `backend/` directory:
-
-```bash
-# Required
-OPENAI_API_KEY=sk-your-openai-api-key
-
-# Optional - Web Search (highly recommended for better results)
-TAVILY_API_KEY=tvly-your-tavily-api-key
-
-# Optional - Arize Phoenix Cloud Observability
-ARIZE_SPACE_ID=your-space-id
-ARIZE_API_KEY=your-api-key
-ARIZE_PROJECT_NAME=trippy-multi-city
-
-# App Settings
-ENVIRONMENT=development
-LOG_LEVEL=INFO
-OPENAI_MODEL=gpt-4o-mini
-OPENAI_TEMPERATURE=0.5
-```
-
-### Running the Application
-
-```bash
-# Terminal 1: Run backend
-cd backend
-source venv/bin/activate  # Windows: venv\Scripts\activate
 python main.py
+# API at http://localhost:8000
 ```
 
-Backend runs at:
-- **API:** http://localhost:8000
-- **API Docs:** http://localhost:8000/docs (Interactive Swagger UI)
-- **Arize Phoenix:** https://app.arize.com (if configured)
-
 ```bash
-# Terminal 2: Run frontend
+# Frontend (separate terminal)
 cd frontend
 python3 -m http.server 3000
+# Visit http://localhost:3000
 ```
 
-Visit: **http://localhost:3000**
+## For Practitioners: How to Use This Repo
 
-## Usage Example
+If you've already explored v1 (or understand basic LangGraph), this repo teaches you the next level.
 
-### Input:
-```json
-{
-  "country": "Japan",
-  "total_duration": 14,
-  "interests": ["temples", "food", "technology"],
-  "budget_tier": "moderate",
-  "starting_city": "Tokyo",
-  "travel_pace": "moderate",
-  "num_cities": 4
-}
-```
+**Step 1: Compare agent.py (v1) with agents/ directory (v2)**
+v1 has all agents in one file. v2 splits them into separate modules — see how `backend/agents/` organizes 9 agents and how `backend/graph/workflow.py` wires them together. This is the pattern for production-grade agent systems.
 
-### Output:
-```json
-{
-  "country_overview": "Detailed Japan overview...",
-  "city_route": ["Tokyo", "Kyoto", "Osaka", "Hiroshima"],
-  "nights_per_city": {
-    "Tokyo": 4,
-    "Kyoto": 4,
-    "Osaka": 3,
-    "Hiroshima": 3
-  },
-  "transport_legs": [
-    {
-      "from": "Tokyo",
-      "to": "Kyoto",
-      "method": "Shinkansen (bullet train)",
-      "duration": "2h 15min",
-      "cost": "$130"
-    }
-  ],
-  "city_plans": [
-    {
-      "city": "Tokyo",
-      "hotels": [...],  // Mock data
-      "itinerary": [...],  // Mock data
-      "local_transport": {...}
-    }
-  ],
-  "total_budget_estimate": 3500,
-  "budget_breakdown": {...},
-  "packing_list": [...],
-  "travel_logistics": {...}
-}
-```
+**Step 2: Study the tool layer**
+Open any file in `backend/tools/`. Notice how `search_hotels` returns structured data even as a mock. Now read `TOOL_IMPROVEMENT_ANALYSIS.md` to see the real API that would replace it. The interface stays the same.
 
-> ⚠️ Note: Hotels, attractions, and most transport data are currently mock/placeholder values. See [Tool Status](#tool-status-real-vs-mock-data) above.
+**Step 3: Trace the state through all 9 agents**
+Open `backend/graph/state.py` — the `TripPlannerState` TypedDict has fields for each agent's output. Follow how state accumulates as it flows through the graph. This is the backbone of multi-agent coordination.
 
-## Observability with Arize Phoenix Cloud
+**Step 4: Swap a mock tool for a real one**
+Pick `get_currency_info` (simplest) and replace the hardcoded data with a call to [ExchangeRate-API](https://www.exchangerate-api.com/) (free, no key needed). This exercise teaches you the mock→real migration pattern.
 
-This project includes full observability using **Arize Phoenix Cloud** to trace:
-- All 9 agent executions
-- LLM calls with prompts and responses
-- Tool invocations and results
-- Token usage and costs
-- Execution timeline and dependencies
-
-### Setup Arize Phoenix
-
-1. **Sign up** at https://app.arize.com
-2. **Create a project** or use existing space
-3. **Get credentials:**
-   - Space ID from space settings
-   - API Key from space settings
-4. **Add to `.env`:**
-   ```bash
-   ARIZE_SPACE_ID=your-space-id
-   ARIZE_API_KEY=your-api-key
-   ARIZE_PROJECT_NAME=trippy-multi-city
-   ```
-5. **Restart backend** - traces will appear in Arize dashboard
-
-### What You'll See in Phoenix
-
-- 🔍 Complete agent workflow graph
-- 📊 LLM token usage and costs
-- ⏱️ Performance bottlenecks
-- 🛠️ Tool success/failure rates
-- 🔗 Full trace of each request through all 9 agents
-
-View traces at: **https://app.arize.com**
+**Then move to [Trippy 3.0](https://github.com/kkotecha/trippy3.0)** — where all tools are real, the system is deployed, and production concerns (CORS, deployment, rate limits) are addressed.
 
 ## Project Structure
 
 ```
 trippy2.0/
-├── README.md                          # This file
 ├── backend/
-│   ├── main.py                        # FastAPI application entry point
-│   ├── config.py                      # Configuration and environment variables
-│   ├── observability.py               # Arize Phoenix Cloud setup
-│   ├── requirements.txt               # Python dependencies
-│   ├── TOOL_IMPROVEMENT_ANALYSIS.md   # Detailed tool improvement roadmap
-│   │
+│   ├── main.py                        # FastAPI entry point
+│   ├── config.py                      # Environment config
+│   ├── observability.py               # Arize Phoenix Cloud
 │   ├── agents/                        # 9 specialized agents
-│   │   ├── country_research.py        # Agent 1: Destination intelligence
-│   │   ├── route_planning.py          # Agent 2: City route optimization
-│   │   ├── transport.py               # Agent 3: Inter-city transport
-│   │   ├── accommodation.py           # Agent 4: Hotels per city
-│   │   ├── itinerary.py               # Agent 5: Daily activities per city
-│   │   ├── local_transport.py         # Agent 6: Getting around cities
-│   │   ├── budget.py                  # Agent 7: Cost compilation
-│   │   ├── logistics.py               # Agent 8: Packing and prep
-│   │   └── compiler.py                # Agent 9: Final response builder
-│   │
-│   ├── tools/                         # Tool implementations
-│   │   ├── __init__.py                # Tool exports
-│   │   ├── search_tools.py            # ✅ web_search (Tavily)
-│   │   ├── calculation_tools.py       # ✅ optimize_route, ⚠️ calculate_travel_time
-│   │   ├── hotel_tools.py             # ❌ search_hotels (mock)
-│   │   ├── transport_tools.py         # ❌ search_trains (mock)
-│   │   ├── attraction_tools.py        # ❌ search_attractions (mock)
-│   │   └── knowledge_tools.py         # ❌ visa/currency (mock)
-│   │
-│   └── graph/                         # LangGraph workflow
-│       ├── state.py                   # State definitions (TripPlannerState, CityState)
-│       └── workflow.py                # Agent orchestration graph
-│
-└── frontend/
-    ├── index.html                     # Trip planner form UI
-    ├── script.js                      # API calls and result rendering
-    └── style.css                      # Styling
+│   │   ├── country_research.py
+│   │   ├── route_planning.py
+│   │   ├── transport.py
+│   │   ├── city_processing.py         # Per-city loop (hotels, itinerary, local transport)
+│   │   ├── budget.py
+│   │   ├── logistics.py
+│   │   └── compiler.py
+│   ├── tools/                         # Tool implementations (mock + real)
+│   │   ├── search_tools.py            # web_search (Tavily - real)
+│   │   ├── calculation_tools.py       # optimize_route (Geopy - real)
+│   │   ├── hotel_tools.py             # search_hotels (mock)
+│   │   ├── transport_tools.py         # search_trains (mock)
+│   │   ├── attraction_tools.py        # search_attractions (mock)
+│   │   └── knowledge_tools.py         # visa/currency (mock)
+│   ├── graph/
+│   │   ├── state.py                   # TripPlannerState + CityState
+│   │   └── workflow.py                # LangGraph workflow definition
+│   └── TOOL_IMPROVEMENT_ANALYSIS.md   # Mock → real API roadmap
+├── frontend/
+│   ├── index.html
+│   ├── script.js
+│   └── style.css
+└── README.md
 ```
 
-## Development
+## The Trippy Series
 
-### Adding a New Tool
-
-1. Create tool in `backend/tools/your_tool.py`:
-
-```python
-from langchain_core.tools import tool
-
-@tool
-def your_new_tool(param: str) -> dict:
-    """
-    Tool description that the LLM will see.
-    Be specific about what it does and when to use it.
-    """
-    # Implementation with error handling
-    try:
-        result = your_api_call(param)
-        return {"data": result}
-    except Exception as e:
-        return {"error": str(e)}
-```
-
-2. Export in `backend/tools/__init__.py`
-3. Import and use in relevant agent
-
-### Adding a New Agent
-
-1. Create agent in `backend/agents/your_agent.py`:
-
-```python
-from graph.state import TripPlannerState
-from langchain_openai import ChatOpenAI
-from tools import your_tool
-
-def your_agent_node(state: TripPlannerState) -> dict:
-    """Agent implementation with LLM and tools"""
-    llm = ChatOpenAI(model="gpt-4o-mini")
-
-    # Use tools and LLM to process state
-    result = your_tool.invoke({"param": state["field"]})
-
-    return {"new_field": result}
-```
-
-2. Update `backend/graph/state.py` to add new state fields
-3. Add node to workflow in `backend/graph/workflow.py`
-
-### Upgrading Mock Tools to Real APIs
-
-See **[TOOL_IMPROVEMENT_ANALYSIS.md](backend/TOOL_IMPROVEMENT_ANALYSIS.md)** for:
-- Detailed analysis of each mock tool
-- Recommended APIs with links
-- Implementation priorities
-- Cost considerations
-- Code examples
-
-**Priority order:**
-1. `search_hotels` → Booking.com API or Google Places
-2. `search_attractions` → Google Places or TripAdvisor
-3. `search_trains` → Rome2Rio or Trainline API
-
-## Troubleshooting
-
-### Backend won't start
-
-```bash
-# Ensure you're in venv
-cd backend
-source venv/bin/activate
-
-# Check dependencies
-pip install -r requirements.txt
-
-# Verify .env file exists and has OPENAI_API_KEY
-cat .env
-```
-
-### Arize Phoenix Cloud not connecting
-
-```bash
-# Check credentials in .env
-ARIZE_SPACE_ID=...  # Should be base64 encoded string
-ARIZE_API_KEY=...   # Should start with "ak-"
-
-# Verify credentials at https://app.arize.com space settings
-# Check backend logs for connection errors
-```
-
-### Tool errors during execution
-
-- Check `.env` has all required API keys
-- Verify network connection
-- Check Arize Phoenix dashboard for detailed error traces
-- Look at backend console logs for specific tool failures
-
-### Slow responses
-
-- **Expected:** 60-90 seconds for full multi-city journey
-- **Normal bottlenecks:**
-  - Country research (web search): 5-10s
-  - Each city itinerary planning: 8-12s per city
-  - Route optimization with 4+ cities: 5-8s
-- **Check:** Arize Phoenix timeline view to identify slow agents
-- **Optimization:** Consider using `gpt-4o-mini` (current) vs `gpt-4` for speed
-
-## API Response Times
-
-Typical execution breakdown for 4-city, 14-day trip:
-
-| Agent | Time | Reason |
-|-------|------|--------|
-| Country Research | 10-15s | Web search + LLM processing |
-| Route Planning | 5-8s | Geocoding + optimization |
-| Transport | 3-5s | Mock data lookup |
-| City Planning (×4) | 40-50s | LLM generates itinerary per city |
-| Budget | 3-5s | Aggregation |
-| Logistics | 3-5s | Packing list generation |
-| Compiler | 2-3s | JSON assembly |
-| **Total** | **65-90s** | End-to-end |
-
-## Roadmap
-
-### Short Term (Mock → Real Data)
-- [ ] Integrate Booking.com API for real hotel data
-- [ ] Add Google Places API for real attractions
-- [ ] Implement Rome2Rio API for actual transport routes
-- [ ] Add Sherpa API for up-to-date visa requirements
-- [ ] Integrate ExchangeRate API for currency data
-
-### Medium Term (Features)
-- [ ] Parallel city processing (reduce to 20-30s response time)
-- [ ] Interactive map visualization with route overlay
-- [ ] PDF export of complete itinerary
-- [ ] Save/load trip plans
-- [ ] User authentication and trip history
-
-### Long Term (Advanced)
-- [ ] Real booking integration (book hotels/trains directly)
-- [ ] Multi-country trips (e.g., Thailand + Vietnam)
-- [ ] Collaborative trip planning (multiple users)
-- [ ] Mobile app with offline itinerary access
-- [ ] AI-powered trip modifications ("Add one more day in Kyoto")
-
-## Contributing
-
-Contributions welcome! Priority areas:
-1. **Upgrading mock tools** - See TOOL_IMPROVEMENT_ANALYSIS.md
-2. **Performance optimization** - Parallel agent execution
-3. **Frontend improvements** - Map view, better visualizations
-4. **Testing** - Unit tests for agents and tools
-
-## Known Limitations
-
-⚠️ **Data Accuracy:**
-- Hotel, attraction, and transport data are currently mock/placeholder
-- Prices are estimates based on tier, not real-time data
-- Train routes limited to 3 hardcoded examples
-- Visa info hardcoded for 4 countries only
-
-⚠️ **Performance:**
-- Sequential agent execution (60-90s response time)
-- No caching of repeated city lookups
-- Rate limited by Nominatim geocoding (1 req/sec)
-
-⚠️ **Functionality:**
-- No user authentication or data persistence
-- Cannot modify generated plans
-- Limited to single-country trips
-- Max 6 cities per trip
+| Version | Focus | Agents | Data Sources | Status |
+|---------|-------|--------|-------------|--------|
+| [**v1**](https://github.com/kkotecha/trippy) | Foundations — agent decomposition, LangGraph basics | 4 | LLM-only | Prototype |
+| **v2.0 (this repo)** | Scale — multi-city, tools, mock data layer | 9 | Mixed (real + mock) | Prototype |
+| [**v3.0**](https://github.com/kkotecha/trippy3.0) | Production — real APIs, deployment, observability | 9 | All real (Google Maps, Tavily, etc.) | Deployed |
 
 ## License
 
-MIT License - feel free to use and modify for your own projects.
-
-## Credits
-
-Built with:
-- **[LangGraph](https://github.com/langchain-ai/langgraph)** - Multi-agent orchestration
-- **[LangChain](https://github.com/langchain-ai/langchain)** - LLM framework
-- **[Arize Phoenix](https://phoenix.arize.com/)** - AI observability platform
-- **[FastAPI](https://fastapi.tiangolo.com/)** - Backend framework
-- **[OpenAI GPT-4o-mini](https://openai.com/)** - Language model
-- **[Tavily](https://tavily.com/)** - Web search API
-- **[Geopy](https://geopy.readthedocs.io/)** - Geocoding and route optimization
-
----
-
-**Built by:** [Your Name]
-**Last Updated:** October 2, 2025
-**Version:** 2.0.0 (Functional Prototype)
+MIT
