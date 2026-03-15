@@ -11,3 +11,10 @@ env/
 .phoenix/
 traces/
 .DS_Store
+
+.env.cloud
+.env*
+
+# Environment variables
+.env
+.env.*
